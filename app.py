@@ -1,6 +1,12 @@
 import streamlit as st
 import requests
 import re
+import os
+from groq import Groq
+from dotenv import load_dotenv
+
+# --- Load environment variables ---
+load_dotenv()
 
 # --- Branding and Theme ---
 st.set_page_config(page_title="Career & Salary Estimator – Powered by AI", layout="centered")
@@ -227,6 +233,64 @@ def format_inr(amount):
     except Exception:
         return amount
 
+# --- LLM Recommendation Logic (moved from backend/llm_utils.py) ---
+def build_prompt(user_data: dict) -> str:
+    return f"""
+    You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a minimal report with:
+    1. A concise summary of the user's input (education, experience, skills, interests, goal, companies, learning style, time commitment, constraints) in a minimal, readable format.
+    2. A section titled 'Dream Job' that returns ONLY the most suitable job title (e.g., 'Full Stack Developer', 'Data Analyst', etc.) for the user based on their goal and background. Do NOT include any explanation or extra text.
+    3. A section titled 'Salary Potential' that returns ONLY the median annual salary number (in INR, e.g., '1200000') for that job in India, based on their background and skillset. Do NOT include any currency symbol, explanation, or extra text.
+    
+    Format your response as:
+    ---
+    User Summary:
+    <minimal summary here>
+    
+    Dream Job:
+    <job title only>
+    
+    Salary Potential:
+    <salary number only>
+    ---
+    
+    User Profile:
+    Education: {user_data['education']}
+    Experience: {user_data['experience']}
+    Technical Knowledge: {', '.join(user_data['tech_knowledge'])}
+    Interests: {user_data['interests']}
+    Career Goal: {user_data['goal']}
+    Dream Companies/Industries: {user_data['companies']}
+    Learning Style: {user_data['learning_style']}
+    Time Commitment: {user_data['time_commitment']} hours/week
+    Other Constraints: {user_data['other_constraints']}
+    """
+
+def get_llm_recommendation(user_data: dict) -> dict:
+    api_key = os.getenv("GROQCLOUD_API_KEY")
+    if not api_key:
+        return {"report": "Error: GROQCLOUD_API_KEY not set in environment."}
+    client = Groq(api_key=api_key)
+    prompt = build_prompt(user_data)
+    try:
+        completion = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_completion_tokens=800,
+            top_p=1,
+            stream=False,
+            stop=None,
+        )
+        llm_reply = completion.choices[0].message.content
+        return {"report": llm_reply}
+    except Exception as e:
+        import traceback
+        error_msg = f"Error communicating with GroqCloud API: {str(e)}\n{traceback.format_exc()}"
+        return {"report": error_msg}
+
 # --- Main Stepper Logic ---
 if st.session_state.step == 1:
     step_education()
@@ -268,13 +332,7 @@ elif st.session_state.step == 10:
     with col2:
         st.subheader(":sparkles: AI-Powered Recommendation")
         try:
-            response = requests.post(
-                "http://127.0.0.1:8000/recommend",
-                json=user_data,
-                timeout=60
-            )
-            response.raise_for_status()
-            result = response.json()
+            result = get_llm_recommendation(user_data)
             report = result.get("report", "No report received.")
             # Extract only Dream Job and salary amount
             dream_job = ""
@@ -312,7 +370,7 @@ elif st.session_state.step == 10:
                 unsafe_allow_html=True
             )
         except Exception as e:
-            st.error(f"Failed to get recommendation from backend: {e}")
+            st.error(f"Failed to get recommendation: {e}")
     # Footer
     st.markdown(
         "<hr style='margin-top:2em'>"
