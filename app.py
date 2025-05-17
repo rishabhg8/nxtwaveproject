@@ -235,6 +235,12 @@ def format_inr(amount):
 
 # --- LLM Recommendation Logic (moved from backend/llm_utils.py) ---
 def build_prompt(user_data: dict) -> str:
+    nxtwave_courses = [
+        "MERN Stack Developer Course",
+        "Full-Stack Developer Course",
+        "Data Analytics Course",
+        "QA/Automation Testing Course"
+    ]
     return f"""
     You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a structured, concise, and actionable report. **You MUST ALWAYS return ALL of the following sections, even if you have to make reasonable assumptions.**
     
@@ -242,7 +248,7 @@ def build_prompt(user_data: dict) -> str:
     1. Estimated Salary Range (in INR LPA, e.g., '₹6–10 LPA')
     2. Roles They Can Aim For (list 2-3 most suitable job titles)
     3. Skills They're Missing (list 3-5 key skills to acquire)
-    4. Suggested Learning Tracks (briefly suggest 1-2 learning paths or course types)
+    4. Suggested Learning Tracks (briefly suggest 2-3 learning paths or course types, but ALWAYS make the number 1 course one of the following, whichever is most relevant to the user's profile: MERN Stack Developer Course, Full-Stack Developer Course, Data Analytics Course, QA/Automation Testing Course. Clearly list it as the first item. The rest can be any other relevant courses or tracks.)
     5. ROI of Upskilling (e.g., 'Increase salary by 80% in 6 months' or similar)
     
     Format your response as:
@@ -257,7 +263,9 @@ def build_prompt(user_data: dict) -> str:
     <skills here>
     
     Suggested Learning Tracks:
-    <learning tracks here>
+    1. <our course from the above list, most relevant to the user>
+    2. <other course>
+    3. <other course>
     
     ROI of Upskilling:
     <roi here>
@@ -398,12 +406,37 @@ elif st.session_state.step == 10:
         st.markdown('<div class="ai-report-grid">', unsafe_allow_html=True)
         for key in required_keys:
             if key in sections and sections[key].strip():
-                st.markdown(f'''
-                <div class="ai-report-box" style="border-color:{border_map.get(key, '#23272f')}">
-                    <div class="ai-report-title"><span class="ai-report-icon">{icon_map.get(key, '')}</span>{key}</div>
-                    <div style="font-size:1.08em;white-space:pre-line;">{sections[key].strip()}</div>
-                </div>
-                ''', unsafe_allow_html=True)
+                # Special handling for Suggested Learning Tracks: link our course to NxtWave
+                if key == "Suggested Learning Tracks":
+                    lines = [l.strip() for l in sections[key].strip().split('\n') if l.strip()]
+                    if lines and any(
+                        c.lower() in lines[0].lower() for c in [
+                            "MERN Stack Developer Course",
+                            "Full-Stack Developer Course",
+                            "Data Analytics Course",
+                            "QA/Automation Testing Course"
+                        ]
+                    ):
+                        # Extract course name (remove numbering if present)
+                        first_course = lines[0]
+                        course_name = first_course
+                        if ". " in first_course:
+                            course_name = first_course.split(". ", 1)[1]
+                        # Make only the first course a link
+                        lines[0] = f'<a href="https://www.ccbp.in/intensive" target="_blank" style="color:#a78bfa;text-decoration:underline;font-weight:600;">{course_name}</a>'
+                    st.markdown(f'''
+                    <div class="ai-report-box" style="border-color:{border_map.get(key, '#23272f')}">
+                        <div class="ai-report-title"><span class="ai-report-icon">{icon_map.get(key, '')}</span>{key}</div>
+                        <div style="font-size:1.08em;white-space:pre-line;">{'\n'.join(lines)}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'''
+                    <div class="ai-report-box" style="border-color:{border_map.get(key, '#23272f')}">
+                        <div class="ai-report-title"><span class="ai-report-icon">{icon_map.get(key, '')}</span>{key}</div>
+                        <div style="font-size:1.08em;white-space:pre-line;">{sections[key].strip()}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         missing_sections = [k for k in required_keys if k not in sections or not sections[k].strip()]
         if missing_sections:
