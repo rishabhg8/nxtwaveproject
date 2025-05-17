@@ -236,24 +236,24 @@ def format_inr(amount):
 # --- LLM Recommendation Logic (moved from backend/llm_utils.py) ---
 def build_prompt(user_data: dict) -> str:
     return f"""
-    You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a structured, concise, and actionable report with the following sections (use clear section headers, and keep each section minimal and relevant):
+    You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a structured, concise, and actionable report. **You MUST ALWAYS return ALL of the following sections, even if you have to make reasonable assumptions.**
     
+    Sections (use these exact headers):
     1. Estimated Salary Range (in INR LPA, e.g., '₹6–10 LPA')
     2. Roles They Can Aim For (list 2-3 most suitable job titles)
     3. Skills They're Missing (list 3-5 key skills to acquire)
     4. Suggested Learning Tracks (briefly suggest 1-2 learning paths or course types)
     5. ROI of Upskilling (e.g., 'Increase salary by 80% in 6 months' or similar)
-    6. (Optional, if relevant) Top Companies Hiring, Job Market Demand, or Personalized Advice
     
     Format your response as:
     ---
     Estimated Salary Range:
     <salary range here>
     
-    Roles to Aim For:
+    Roles They Can Aim For:
     <roles here>
     
-    Skills to Acquire:
+    Skills They're Missing:
     <skills here>
     
     Suggested Learning Tracks:
@@ -261,9 +261,9 @@ def build_prompt(user_data: dict) -> str:
     
     ROI of Upskilling:
     <roi here>
-    
-    (Optional Sections)
     ---
+    
+    Do not skip any section. If you are unsure, make a reasonable guess. Do not add extra commentary or sections unless highly relevant.
     
     User Profile:
     Education: {user_data['education']}
@@ -347,6 +347,13 @@ elif st.session_state.step == 10:
             result = get_llm_recommendation(user_data)
             report = result.get("report", "No report received.")
             # Parse the report into sections
+            required_keys = [
+                "Estimated Salary Range",
+                "Roles They Can Aim For",
+                "Skills They're Missing",
+                "Suggested Learning Tracks",
+                "ROI of Upskilling"
+            ]
             sections = {}
             current_section = None
             for line in report.splitlines():
@@ -369,28 +376,26 @@ elif st.session_state.step == 10:
                 """
             icon_map = {
                 "Estimated Salary Range": "💰",
-                "Roles to Aim For": "🎯",
-                "Skills to Acquire": "🛠️",
+                "Roles They Can Aim For": "🎯",
+                "Skills They're Missing": "🛠️",
                 "Suggested Learning Tracks": "📚",
                 "ROI of Upskilling": "📈",
             }
             color_map = {
                 "Estimated Salary Range": "#e6f4ea",
-                "Roles to Aim For": "#f0f7fa",
-                "Skills to Acquire": "#f9f5e3",
+                "Roles They Can Aim For": "#f0f7fa",
+                "Skills They're Missing": "#f9f5e3",
                 "Suggested Learning Tracks": "#f3e8fd",
                 "ROI of Upskilling": "#fff4e6",
             }
-            for key in [
-                "Estimated Salary Range",
-                "Roles to Aim For",
-                "Skills to Acquire",
-                "Suggested Learning Tracks",
-                "ROI of Upskilling"
-            ]:
-                if key in sections:
+            missing_sections = [k for k in required_keys if k not in sections or not sections[k].strip()]
+            for key in required_keys:
+                if key in sections and sections[key].strip():
                     st.markdown(styled_box(key, sections[key], icon_map.get(key), color_map.get(key)), unsafe_allow_html=True)
-            # Show any optional sections (if you want, you can add them here)
+            if missing_sections:
+                st.warning(f"Some sections are missing from the AI report: {', '.join(missing_sections)}. Please try again or contact support.")
+                with st.expander("Show raw AI response for debugging"):
+                    st.code(report)
         except Exception as e:
             st.error(f"Failed to get recommendation: {e}")
     # Lead capture CTA moved to the bottom of the page
