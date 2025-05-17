@@ -424,12 +424,14 @@ elif st.session_state.step == 10:
                             course_name = first_course.split(". ", 1)[1]
                         # Make only the first course a link
                         lines[0] = f'<a href="https://www.ccbp.in/intensive" target="_blank" style="color:#a78bfa;text-decoration:underline;font-weight:600;">{course_name}</a>'
-                    st.markdown(f'''
+                    html_lines = "<br>".join(lines)
+                    box_html = f'''
                     <div class="ai-report-box" style="border-color:{border_map.get(key, '#23272f')}">
                         <div class="ai-report-title"><span class="ai-report-icon">{icon_map.get(key, '')}</span>{key}</div>
-                        <div style="font-size:1.08em;white-space:pre-line;">{'\n'.join(lines)}</div>
+                        <div style="font-size:1.08em;white-space:pre-line;">{html_lines}</div>
                     </div>
-                    ''', unsafe_allow_html=True)
+                    '''
+                    st.markdown(box_html, unsafe_allow_html=True)
                 else:
                     st.markdown(f'''
                     <div class="ai-report-box" style="border-color:{border_map.get(key, '#23272f')}">
