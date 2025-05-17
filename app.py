@@ -236,21 +236,33 @@ def format_inr(amount):
 # --- LLM Recommendation Logic (moved from backend/llm_utils.py) ---
 def build_prompt(user_data: dict) -> str:
     return f"""
-    You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a minimal report with:
-    1. A concise summary of the user's input (education, experience, skills, interests, goal, companies, learning style, time commitment, constraints) in a minimal, readable format.
-    2. A section titled 'Dream Job' that returns ONLY the most suitable job title (e.g., 'Full Stack Developer', 'Data Analyst', etc.) for the user based on their goal and background. Do NOT include any explanation or extra text.
-    3. A section titled 'Salary Potential' that returns ONLY the median annual salary number (in INR, e.g., '1200000') for that job in India, based on their background and skillset. Do NOT include any currency symbol, explanation, or extra text.
+    You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a structured, concise, and actionable report with the following sections (use clear section headers, and keep each section minimal and relevant):
+    
+    1. Estimated Salary Range (in INR LPA, e.g., '₹6–10 LPA')
+    2. Roles They Can Aim For (list 2-3 most suitable job titles)
+    3. Skills They're Missing (list 3-5 key skills to acquire)
+    4. Suggested Learning Tracks (briefly suggest 1-2 learning paths or course types)
+    5. ROI of Upskilling (e.g., 'Increase salary by 80% in 6 months' or similar)
+    6. (Optional, if relevant) Top Companies Hiring, Job Market Demand, or Personalized Advice
     
     Format your response as:
     ---
-    User Summary:
-    <minimal summary here>
+    Estimated Salary Range:
+    <salary range here>
     
-    Dream Job:
-    <job title only>
+    Roles to Aim For:
+    <roles here>
     
-    Salary Potential:
-    <salary number only>
+    Skills to Acquire:
+    <skills here>
+    
+    Suggested Learning Tracks:
+    <learning tracks here>
+    
+    ROI of Upskilling:
+    <roi here>
+    
+    (Optional Sections)
     ---
     
     User Profile:
@@ -330,42 +342,69 @@ elif st.session_state.step == 10:
         **Other Constraints:** {user_data.get('other_constraints', '')}
         """)
     with col2:
-        st.subheader(":sparkles: AI-Powered Recommendation")
+        st.subheader(":sparkles: AI-Powered Career Report")
         try:
             result = get_llm_recommendation(user_data)
             report = result.get("report", "No report received.")
-            # Extract only Dream Job and salary amount
-            dream_job = ""
-            salary_potential = ""
-            if 'Dream Job:' in report and 'Salary Potential:' in report:
-                dream_job = report.split('Dream Job:')[1].split('Salary Potential:')[0].strip()
-                salary_section = report.split('Salary Potential:')[1].replace('---', '').strip()
-                salary_match = re.search(r'\b\d[\d,\.]*\b', salary_section)
-                if salary_match:
-                    salary_potential = salary_match.group(0)
-                else:
-                    salary_potential = salary_section.split(" ")[0] if salary_section else ""
-            dream_job_display = dream_job if dream_job.strip() else '<span style="color:#888">(No job title returned)</span>'
-            salary_display = format_inr(salary_potential) if salary_potential.strip() else '<span style="color:#888">(No salary returned)</span>'
-            if salary_potential.strip():
-                salary_display = f'₹ {salary_display}'
-            st.markdown(
-                f"""
-                <div style='padding:22px 18px 16px 18px;border-radius:14px;box-shadow:0 2px 8px #0006;font-family:"IBM Plex Mono",monospace;'>
-                <h4 style='margin-bottom:8px;'>🚀 Dream Job</h4>
-                <div style='margin-bottom:18px;font-size:1.2em;font-weight:600;'>{dream_job_display} <span style="font-size:1.2em;">💼</span></div>
-                <h4 style='margin-bottom:8px;'>💰 Salary Potential</h4>
-                <div style='font-size:1.5em;font-weight:700;'>{salary_display}</div>
+            # Parse the report into sections
+            sections = {}
+            current_section = None
+            for line in report.splitlines():
+                line = line.strip()
+                if not line or line == '---':
+                    continue
+                if line.endswith(":") and len(line) < 40:
+                    current_section = line[:-1]
+                    sections[current_section] = ""
+                elif current_section:
+                    sections[current_section] += line + "\n"
+            # Display each section in a styled box
+            def styled_box(title, content, icon=None, color="#f7f7fa"):
+                icon_html = f"<span style='font-size:1.3em;margin-right:6px;'>{icon}</span>" if icon else ""
+                return f"""
+                <div style='background:{color};padding:18px 16px 14px 16px;border-radius:13px;box-shadow:0 2px 8px #0002;margin-bottom:18px;'>
+                <div style='font-size:1.1em;font-weight:600;margin-bottom:6px;'>{icon_html}{title}</div>
+                <div style='font-size:1.08em;'>{content.strip()}</div>
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
-            # CTA Button as a link
+                """
+            icon_map = {
+                "Estimated Salary Range": "💰",
+                "Roles to Aim For": "🎯",
+                "Skills to Acquire": "🛠️",
+                "Suggested Learning Tracks": "📚",
+                "ROI of Upskilling": "📈",
+            }
+            color_map = {
+                "Estimated Salary Range": "#e6f4ea",
+                "Roles to Aim For": "#f0f7fa",
+                "Skills to Acquire": "#f9f5e3",
+                "Suggested Learning Tracks": "#f3e8fd",
+                "ROI of Upskilling": "#fff4e6",
+            }
+            for key in [
+                "Estimated Salary Range",
+                "Roles to Aim For",
+                "Skills to Acquire",
+                "Suggested Learning Tracks",
+                "ROI of Upskilling"
+            ]:
+                if key in sections:
+                    st.markdown(styled_box(key, sections[key], icon_map.get(key), color_map.get(key)), unsafe_allow_html=True)
+            # Show any optional sections
+            for k, v in sections.items():
+                if k not in icon_map:
+                    st.markdown(styled_box(k, v, None, "#f7f7fa"), unsafe_allow_html=True)
+            # Lead capture CTA
             st.markdown(
                 """
-                <a href="https://www.ccbp.in/intensive" target="_blank">
-                    <button style='background-color:#ee4822;color:white;padding:0.7em 1.5em;border:none;border-radius:6px;font-size:1.1em;font-family:"IBM Plex Mono",monospace;cursor:pointer;margin-top:1em;'>🚀 Upskill with Our Courses</button>
-                </a>
+                <div style='background:#ee4822;padding:18px 16px 14px 16px;border-radius:13px;box-shadow:0 2px 8px #0002;margin-bottom:18px;'>
+                <div style='font-size:1.15em;font-weight:600;color:white;margin-bottom:8px;'>Ready to Upskill or Need Career Guidance?</div>
+                <form action="mailto:contact@yourdomain.com" method="get" enctype="text/plain">
+                    <input type="email" name="email" placeholder="Enter your email" style="padding:8px 12px;border-radius:5px;border:none;width:60%;margin-right:8px;" required>
+                    <button type="submit" style="background:white;color:#ee4822;padding:8px 18px;border:none;border-radius:5px;font-weight:600;cursor:pointer;">Contact Me</button>
+                </form>
+                <div style='color:white;font-size:0.98em;margin-top:8px;'>We'll reach out with personalized advice and upskilling options.</div>
+                </div>
                 """,
                 unsafe_allow_html=True
             )
