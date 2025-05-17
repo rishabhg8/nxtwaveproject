@@ -358,7 +358,7 @@ elif st.session_state.step == 10:
                     sections[current_section] = ""
                 elif current_section:
                     sections[current_section] += line + "\n"
-            # Display each section in a styled box
+            # Only show the required sections in the main output area
             def styled_box(title, content, icon=None, color="#f7f7fa"):
                 icon_html = f"<span style='font-size:1.3em;margin-right:6px;'>{icon}</span>" if icon else ""
                 return f"""
@@ -390,26 +390,23 @@ elif st.session_state.step == 10:
             ]:
                 if key in sections:
                     st.markdown(styled_box(key, sections[key], icon_map.get(key), color_map.get(key)), unsafe_allow_html=True)
-            # Show any optional sections
-            for k, v in sections.items():
-                if k not in icon_map:
-                    st.markdown(styled_box(k, v, None, "#f7f7fa"), unsafe_allow_html=True)
-            # Lead capture CTA
-            st.markdown(
-                """
-                <div style='background:#ee4822;padding:18px 16px 14px 16px;border-radius:13px;box-shadow:0 2px 8px #0002;margin-bottom:18px;'>
-                <div style='font-size:1.15em;font-weight:600;color:white;margin-bottom:8px;'>Ready to Upskill or Need Career Guidance?</div>
-                <form action="mailto:contact@yourdomain.com" method="get" enctype="text/plain">
-                    <input type="email" name="email" placeholder="Enter your email" style="padding:8px 12px;border-radius:5px;border:none;width:60%;margin-right:8px;" required>
-                    <button type="submit" style="background:white;color:#ee4822;padding:8px 18px;border:none;border-radius:5px;font-weight:600;cursor:pointer;">Contact Me</button>
-                </form>
-                <div style='color:white;font-size:0.98em;margin-top:8px;'>We'll reach out with personalized advice and upskilling options.</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+            # Show any optional sections (if you want, you can add them here)
         except Exception as e:
             st.error(f"Failed to get recommendation: {e}")
+    # Lead capture CTA moved to the bottom of the page
+    st.markdown(
+        """
+        <div style='background:#ee4822;padding:18px 16px 14px 16px;border-radius:13px;box-shadow:0 2px 8px #0002;margin-bottom:18px;'>
+        <div style='font-size:1.15em;font-weight:600;color:white;margin-bottom:8px;'>Ready to Upskill or Need Career Guidance?</div>
+        <form action="mailto:contact@yourdomain.com" method="get" enctype="text/plain">
+            <input type="email" name="email" placeholder="Enter your email" style="padding:8px 12px;border-radius:5px;border:none;width:60%;margin-right:8px;" required>
+            <button type="submit" style="background:white;color:#ee4822;padding:8px 18px;border:none;border-radius:5px;font-weight:600;cursor:pointer;">Contact Me</button>
+        </form>
+        <div style='color:white;font-size:0.98em;margin-top:8px;'>We'll reach out with personalized advice and upskilling options.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
     # Footer
     st.markdown(
         "<hr style='margin-top:2em'>"
