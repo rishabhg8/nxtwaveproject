@@ -236,10 +236,10 @@ def format_inr(amount):
 # --- LLM Recommendation Logic (moved from backend/llm_utils.py) ---
 def build_prompt(user_data: dict) -> str:
     nxtwave_courses = [
-        "MERN Stack Developer Course",
-        "Full-Stack Developer Course",
-        "Data Analytics Course",
-        "QA/Automation Testing Course"
+        "NxtWave MERN Stack Developer Course",
+        "NxtWave Full-Stack Developer Course",
+        "NxtWave Data Analytics Course",
+        "NxtWave QA/Automation Testing Course"
     ]
     return f"""
     You are an expert career and salary advisor for IT students in India. Given the following user profile, generate a structured, concise, and actionable report. **You MUST ALWAYS return ALL of the following sections, even if you have to make reasonable assumptions.**
@@ -248,7 +248,7 @@ def build_prompt(user_data: dict) -> str:
     1. Estimated Salary Range (in INR LPA, e.g., '₹6–10 LPA')
     2. Roles They Can Aim For (list 2-3 most suitable job titles)
     3. Skills They're Missing (list 3-5 key skills to acquire)
-    4. Suggested Learning Tracks (briefly suggest 2-3 learning paths or course types, but ALWAYS make the number 1 course one of the following, whichever is most relevant to the user's profile: MERN Stack Developer Course, Full-Stack Developer Course, Data Analytics Course, QA/Automation Testing Course. Clearly list it as the first item. The rest can be any other relevant courses or tracks.)
+    4. Suggested Learning Tracks (briefly suggest 2-3 learning paths or course types, but ALWAYS make the number 1 course one of the following, whichever is most relevant to the user's profile: NxtWave MERN Stack Developer Course, NxtWave Full-Stack Developer Course, NxtWave Data Analytics Course, NxtWave QA/Automation Testing Course. Clearly list it as the first item. The rest can be any other relevant courses or tracks.)
     5. ROI of Upskilling (e.g., 'Increase salary by 80% in 6 months' or similar)
     
     Format your response as:
@@ -411,10 +411,10 @@ elif st.session_state.step == 10:
                     lines = [l.strip() for l in sections[key].strip().split('\n') if l.strip()]
                     if lines and any(
                         c.lower() in lines[0].lower() for c in [
-                            "MERN Stack Developer Course",
-                            "Full-Stack Developer Course",
-                            "Data Analytics Course",
-                            "QA/Automation Testing Course"
+                            "NxtWave MERN Stack Developer Course",
+                            "NxtWave Full-Stack Developer Course",
+                            "NxtWave Data Analytics Course",
+                            "NxtWave QA/Automation Testing Course"
                         ]
                     ):
                         # Extract course name (remove numbering if present)
