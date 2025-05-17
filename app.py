@@ -327,85 +327,114 @@ elif st.session_state.step == 9:
 elif st.session_state.step == 10:
     st.header("Your Career & Salary Estimation")
     user_data = st.session_state.user_data
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.subheader("Your Profile Summary")
-        st.markdown(f"""
-        **Education:** {user_data.get('education', '')}  
-        **Experience:** {user_data.get('experience', '')}  
-        **Technical Knowledge:** {', '.join(user_data.get('tech_knowledge', []))}  
-        **Interests:** {user_data.get('interests', '')}  
-        **Career Goal:** {user_data.get('goal', '')}  
-        **Dream Companies/Industries:** {user_data.get('companies', '')}  
-        **Learning Style:** {user_data.get('learning_style', '')}  
-        **Time Commitment:** {user_data.get('time_commitment', '')} hours/week  
-        **Other Constraints:** {user_data.get('other_constraints', '')}
-        """)
-    with col2:
-        st.subheader(":sparkles: AI-Powered Career Report")
-        try:
-            result = get_llm_recommendation(user_data)
-            report = result.get("report", "No report received.")
-            # Parse the report into sections
-            required_keys = [
-                "Estimated Salary Range",
-                "Roles They Can Aim For",
-                "Skills They're Missing",
-                "Suggested Learning Tracks",
-                "ROI of Upskilling"
-            ]
-            sections = {}
-            current_section = None
-            for line in report.splitlines():
-                line = line.strip()
-                if not line or line == '---':
-                    continue
-                if line.endswith(":") and len(line) < 40:
-                    current_section = line[:-1]
-                    sections[current_section] = ""
-                elif current_section:
-                    sections[current_section] += line + "\n"
-            # Only show the required sections in the main output area
-            def styled_box(title, content, icon=None, color="#f7f7fa"):
-                icon_html = f"<span style='font-size:1.3em;margin-right:6px;'>{icon}</span>" if icon else ""
-                return f"""
-                <div style='background:{color};padding:18px 16px 14px 16px;border-radius:13px;box-shadow:0 2px 8px #0002;margin-bottom:18px;'>
-                <div style='font-size:1.1em;font-weight:600;margin-bottom:6px;'>{icon_html}{title}</div>
-                <div style='font-size:1.08em;'>{content.strip()}</div>
+    # --- AI-Powered Career Report Section ---
+    st.subheader(":sparkles: AI-Powered Career Report")
+    try:
+        result = get_llm_recommendation(user_data)
+        report = result.get("report", "No report received.")
+        required_keys = [
+            "Estimated Salary Range",
+            "Roles They Can Aim For",
+            "Skills They're Missing",
+            "Suggested Learning Tracks",
+            "ROI of Upskilling"
+        ]
+        sections = {}
+        current_section = None
+        for line in report.splitlines():
+            line = line.strip()
+            if not line or line == '---':
+                continue
+            if line.endswith(":") and len(line) < 40:
+                current_section = line[:-1]
+                sections[current_section] = ""
+            elif current_section:
+                sections[current_section] += line + "\n"
+        icon_map = {
+            "Estimated Salary Range": "💰",
+            "Roles They Can Aim For": "🎯",
+            "Skills They're Missing": "🛠️",
+            "Suggested Learning Tracks": "📚",
+            "ROI of Upskilling": "📈",
+        }
+        color_map = {
+            "Estimated Salary Range": "#181c20",
+            "Roles They Can Aim For": "#181c20",
+            "Skills They're Missing": "#181c20",
+            "Suggested Learning Tracks": "#181c20",
+            "ROI of Upskilling": "#181c20",
+        }
+        border_map = {
+            "Estimated Salary Range": "#6ee7b7",
+            "Roles They Can Aim For": "#7dd3fc",
+            "Skills They're Missing": "#fde68a",
+            "Suggested Learning Tracks": "#c4b5fd",
+            "ROI of Upskilling": "#fdba74",
+        }
+        # Responsive grid: 2 columns on desktop, 1 on mobile
+        st.markdown("""
+        <style>
+        .ai-report-grid { display: flex; flex-wrap: wrap; gap: 24px; margin-bottom: 32px; }
+        .ai-report-box {
+            background: #181c20;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px #0004;
+            padding: 22px 20px 18px 20px;
+            min-width: 280px;
+            flex: 1 1 340px;
+            border: 2.5px solid #23272f;
+            margin-bottom: 0;
+            color: #f3f4f6;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        .ai-report-title { font-size: 1.13em; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; }
+        .ai-report-icon { font-size: 1.35em; margin-right: 10px; }
+        @media (max-width: 900px) {
+            .ai-report-grid { flex-direction: column; gap: 18px; }
+            .ai-report-box { min-width: 0; }
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        st.markdown('<div class="ai-report-grid">', unsafe_allow_html=True)
+        for key in required_keys:
+            if key in sections and sections[key].strip():
+                st.markdown(f'''
+                <div class="ai-report-box" style="border-color:{border_map.get(key, '#23272f')}">
+                    <div class="ai-report-title"><span class="ai-report-icon">{icon_map.get(key, '')}</span>{key}</div>
+                    <div style="font-size:1.08em;white-space:pre-line;">{sections[key].strip()}</div>
                 </div>
-                """
-            icon_map = {
-                "Estimated Salary Range": "💰",
-                "Roles They Can Aim For": "🎯",
-                "Skills They're Missing": "🛠️",
-                "Suggested Learning Tracks": "📚",
-                "ROI of Upskilling": "📈",
-            }
-            color_map = {
-                "Estimated Salary Range": "#e6f4ea",
-                "Roles They Can Aim For": "#f0f7fa",
-                "Skills They're Missing": "#f9f5e3",
-                "Suggested Learning Tracks": "#f3e8fd",
-                "ROI of Upskilling": "#fff4e6",
-            }
-            missing_sections = [k for k in required_keys if k not in sections or not sections[k].strip()]
-            for key in required_keys:
-                if key in sections and sections[key].strip():
-                    st.markdown(styled_box(key, sections[key], icon_map.get(key), color_map.get(key)), unsafe_allow_html=True)
-            if missing_sections:
-                st.warning(f"Some sections are missing from the AI report: {', '.join(missing_sections)}. Please try again or contact support.")
-                with st.expander("Show raw AI response for debugging"):
-                    st.code(report)
-        except Exception as e:
-            st.error(f"Failed to get recommendation: {e}")
-    # Lead capture CTA moved to the bottom of the page
+                ''', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        missing_sections = [k for k in required_keys if k not in sections or not sections[k].strip()]
+        if missing_sections:
+            st.warning(f"Some sections are missing from the AI report: {', '.join(missing_sections)}. Please try again or contact support.")
+            with st.expander("Show raw AI response for debugging"):
+                st.code(report)
+    except Exception as e:
+        st.error(f"Failed to get recommendation: {e}")
+    # --- Profile Summary Section (below the report) ---
+    st.subheader("Your Profile Summary")
+    st.markdown(f"""
+    <div style='background:#181c20;border-radius:13px;box-shadow:0 2px 8px #0002;padding:18px 16px 14px 16px;margin-bottom:24px;border:2.5px solid #23272f;color:#f3f4f6;'>
+    <b>Education:</b> {user_data.get('education', '')}<br>
+    <b>Experience:</b> {user_data.get('experience', '')}<br>
+    <b>Technical Knowledge:</b> {', '.join(user_data.get('tech_knowledge', []))}<br>
+    <b>Interests:</b> {user_data.get('interests', '')}<br>
+    <b>Career Goal:</b> {user_data.get('goal', '')}<br>
+    <b>Dream Companies/Industries:</b> {user_data.get('companies', '')}<br>
+    <b>Learning Style:</b> {user_data.get('learning_style', '')}<br>
+    <b>Time Commitment:</b> {user_data.get('time_commitment', '')} hours/week<br>
+    <b>Other Constraints:</b> {user_data.get('other_constraints', '')}
+    </div>
+    """, unsafe_allow_html=True)
+    # --- Lead capture CTA at the very bottom ---
     st.markdown(
         """
         <div style='background:#ee4822;padding:18px 16px 14px 16px;border-radius:13px;box-shadow:0 2px 8px #0002;margin-bottom:18px;'>
         <div style='font-size:1.15em;font-weight:600;color:white;margin-bottom:8px;'>Ready to Upskill or Need Career Guidance?</div>
-        <form action="mailto:contact@yourdomain.com" method="get" enctype="text/plain">
-            <input type="email" name="email" placeholder="Enter your email" style="padding:8px 12px;border-radius:5px;border:none;width:60%;margin-right:8px;" required>
-            <button type="submit" style="background:white;color:#ee4822;padding:8px 18px;border:none;border-radius:5px;font-weight:600;cursor:pointer;">Contact Me</button>
+        <form action=\"mailto:contact@yourdomain.com\" method=\"get\" enctype=\"text/plain\">
+            <input type=\"email\" name=\"email\" placeholder=\"Enter your email\" style=\"padding:8px 12px;border-radius:5px;border:none;width:60%;margin-right:8px;\" required>
+            <button type=\"submit\" style=\"background:white;color:#ee4822;padding:8px 18px;border:none;border-radius:5px;font-weight:600;cursor:pointer;\">Contact Me</button>
         </form>
         <div style='color:white;font-size:0.98em;margin-top:8px;'>We'll reach out with personalized advice and upskilling options.</div>
         </div>
